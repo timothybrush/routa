@@ -764,8 +764,9 @@ mod tests {
     use crate::state::{AppState, AppStateInner};
     use std::io::{Read, Write};
     use std::net::TcpListener;
-    use std::sync::{Arc, Mutex, OnceLock};
+    use std::sync::{Arc, OnceLock};
     use std::thread;
+    use tokio::sync::Mutex;
 
     fn env_lock() -> &'static Mutex<()> {
         static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
@@ -896,7 +897,7 @@ mod tests {
 
     #[tokio::test]
     async fn create_issue_from_card_links_existing_task() {
-        let _lock = env_lock().lock().expect("env lock");
+        let _lock = env_lock().lock().await;
         let state = setup_state().await;
         save_default_codebase(&state, "https://github.com/acme/platform").await;
 
@@ -954,7 +955,7 @@ mod tests {
 
     #[tokio::test]
     async fn sync_github_issues_creates_and_updates_tasks() {
-        let _lock = env_lock().lock().expect("env lock");
+        let _lock = env_lock().lock().await;
         let state = setup_state().await;
         save_default_codebase(&state, "https://github.com/acme/platform").await;
 
@@ -1042,7 +1043,7 @@ mod tests {
 
     #[tokio::test]
     async fn sync_github_issues_dry_run_does_not_mutate_store() {
-        let _lock = env_lock().lock().expect("env lock");
+        let _lock = env_lock().lock().await;
         let state = setup_state().await;
         save_default_codebase(&state, "https://github.com/acme/platform").await;
 

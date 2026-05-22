@@ -499,11 +499,9 @@ async fn handle_claude_message(
         .unwrap_or_else(|| "claude-session".to_string());
 
     match msg.msg_type.as_str() {
-        "system" => {
-            if msg.subtype.as_deref() == Some("init") {
-                if let Some(new_session_id) = msg.session_id {
-                    *session_id.lock().await = Some(new_session_id);
-                }
+        "system" if msg.subtype.as_deref() == Some("init") => {
+            if let Some(new_session_id) = msg.session_id {
+                *session_id.lock().await = Some(new_session_id);
             }
         }
 
