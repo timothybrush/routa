@@ -79,6 +79,15 @@ describe("compact-tool-call-param-deltas", () => {
     expect(historyUpdate).not.toHaveProperty("accumulatedJson");
     expect(historyUpdate).not.toHaveProperty("parsedInput");
   });
+
+  it("fails fast when the database path does not exist", () => {
+    expect(() => compactToolCallDeltaDatabase({
+      dbPath: path.join(tmpDir, "missing.db"),
+      apply: false,
+      vacuum: false,
+      batchSize: 1,
+    })).toThrow();
+  });
 });
 
 function seedDatabase(targetPath: string): void {

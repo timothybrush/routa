@@ -83,7 +83,7 @@ export function parseArgs(argv: string[]): CompactToolCallDeltaOptions {
 }
 
 export function compactToolCallDeltaDatabase(options: CompactToolCallDeltaOptions): CompactionResult {
-  const db = new BetterSqlite3(options.dbPath);
+  const db = new BetterSqlite3(options.dbPath, { fileMustExist: true });
   try {
     const sessionMessages = hasTable(db, "session_messages")
       ? compactSessionMessageRows(db, options)
@@ -116,9 +116,12 @@ function compactSessionMessageRows(
 ): CompactionStats {
   const stats = emptyStats();
   const select = db.prepare(`
-    SELECT id, payload
+    SELECT rowid, id, payload
     FROM session_messages
     WHERE event_type = 'tool_call_params_delta'
+      AND rowid > ?
+    ORDER BY rowid
+    LIMIT ?
   `);
   const update = db.prepare("UPDATE session_messages SET payload = ? WHERE id = ?");
   const flush = db.transaction((rows: Array<{ id: string; payload: string }>) => {
@@ -126,20 +129,29 @@ function compactSessionMessageRows(
       update.run(row.payload, row.id);
     }
   });
-  const pending: Array<{ id: string; payload: string }> = [];
+  let lastRowId = 0;
 
-  for (const row of select.iterate() as Iterable<{ id: string; payload: string }>) {
-    stats.scanned += 1;
-    const compacted = compactNotificationJson(row.payload);
-    accumulateStats(stats, row.payload, compacted);
-    if (!compacted.changed || !options.apply) continue;
+  while (true) {
+    const rows = select.all(lastRowId, options.batchSize) as Array<{
+      rowid: number;
+      id: string;
+      payload: string;
+    }>;
+    if (rows.length === 0) break;
 
-    pending.push({ id: row.id, payload: compacted.afterJson });
-  }
+    const pending: Array<{ id: string; payload: string }> = [];
+    for (const row of rows) {
+      lastRowId = row.rowid;
+      stats.scanned += 1;
+      const compacted = compactNotificationJson(row.payload);
+      accumulateStats(stats, row.payload, compacted);
+      if (compacted.changed && options.apply) {
+        pending.push({ id: row.id, payload: compacted.afterJson });
+      }
+    }
 
-  if (options.apply) {
-    for (let i = 0; i < pending.length; i += options.batchSize) {
-      flush(pending.slice(i, i + options.batchSize));
+    if (pending.length > 0) {
+      flush(pending);
     }
   }
 
@@ -152,9 +164,12 @@ function compactAcpSessionHistoryRows(
 ): CompactionStats {
   const stats = emptyStats();
   const select = db.prepare(`
-    SELECT id, message_history AS messageHistory
+    SELECT rowid, id, message_history AS messageHistory
     FROM acp_sessions
     WHERE message_history LIKE '%tool_call_params_delta%'
+      AND rowid > ?
+    ORDER BY rowid
+    LIMIT ?
   `);
   const update = db.prepare("UPDATE acp_sessions SET message_history = ? WHERE id = ?");
   const flush = db.transaction((rows: Array<{ id: string; messageHistory: string }>) => {
@@ -162,20 +177,29 @@ function compactAcpSessionHistoryRows(
       update.run(row.messageHistory, row.id);
     }
   });
-  const pending: Array<{ id: string; messageHistory: string }> = [];
+  let lastRowId = 0;
 
-  for (const row of select.iterate() as Iterable<{ id: string; messageHistory: string }>) {
-    stats.scanned += 1;
-    const compacted = compactHistoryJson(row.messageHistory);
-    accumulateStats(stats, row.messageHistory, compacted);
-    if (!compacted.changed || !options.apply) continue;
+  while (true) {
+    const rows = select.all(lastRowId, options.batchSize) as Array<{
+      rowid: number;
+      id: string;
+      messageHistory: string;
+    }>;
+    if (rows.length === 0) break;
 
-    pending.push({ id: row.id, messageHistory: compacted.afterJson });
-  }
+    const pending: Array<{ id: string; messageHistory: string }> = [];
+    for (const row of rows) {
+      lastRowId = row.rowid;
+      stats.scanned += 1;
+      const compacted = compactHistoryJson(row.messageHistory);
+      accumulateStats(stats, row.messageHistory, compacted);
+      if (compacted.changed && options.apply) {
+        pending.push({ id: row.id, messageHistory: compacted.afterJson });
+      }
+    }
 
-  if (options.apply) {
-    for (let i = 0; i < pending.length; i += options.batchSize) {
-      flush(pending.slice(i, i + options.batchSize));
+    if (pending.length > 0) {
+      flush(pending);
     }
   }
 
