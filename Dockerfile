@@ -24,7 +24,16 @@ RUN npm ci --legacy-peer-deps \
   --fetch-retry-maxtimeout=120000 \
   --fetch-timeout=300000
 
-# ── Stage 2: build ───────────────────────────────────────────────────────
+# ── Stage 2: database schema migrator ────────────────────────────────────
+FROM base AS migrator
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+CMD ["npm", "run", "db:push"]
+
+# ── Stage 3: build ───────────────────────────────────────────────────────
 FROM base AS builder
 WORKDIR /app
 
@@ -37,7 +46,7 @@ COPY . .
 # standalone chunks directory so ROUTA_DB_DRIVER=sqlite works at runtime.
 RUN npm run build:docker
 
-# ── Stage 3: production runner ────────────────────────────────────────────
+# ── Stage 4: production runner ────────────────────────────────────────────
 FROM base AS runner
 WORKDIR /app
 
