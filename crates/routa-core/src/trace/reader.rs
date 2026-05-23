@@ -149,7 +149,7 @@ impl TraceReader {
         }
 
         // Sort by timestamp (newest first) and apply pagination
-        traces.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        traces.sort_by_key(|trace| std::cmp::Reverse(trace.timestamp));
 
         let offset = query.offset.unwrap_or(0);
         let limit = query.limit.unwrap_or(traces.len());

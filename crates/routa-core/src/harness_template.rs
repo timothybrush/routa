@@ -734,7 +734,7 @@ fn collect_lifecycle_tiers(
             }
         })
         .collect();
-    result.sort_by(|a, b| tier_order(&a.tier).cmp(&tier_order(&b.tier)));
+    result.sort_by_key(|summary| tier_order(&summary.tier));
     result
 }
 

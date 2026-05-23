@@ -10,6 +10,10 @@ use tempfile::TempDir;
 mod common;
 use common::ApiFixture;
 
+#[path = "support/feature_explorer_history.rs"]
+mod feature_explorer_history;
+use feature_explorer_history::FeatureExplorerHistoryFixture;
+
 struct GitRepoFixture {
     _temp: TempDir,
     repo_path: PathBuf,
@@ -84,6 +88,14 @@ fn write_file(repo_path: &Path, relative_path: &str, content: &str) {
         fs::create_dir_all(parent).expect("parent directory should exist");
     }
     fs::write(path, content).expect("file should be written");
+}
+
+fn workspace_root() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(Path::parent)
+        .expect("workspace root")
+        .to_path_buf()
 }
 
 fn json_has_error(resp: &Value, expected: &str) -> bool {
@@ -1787,11 +1799,7 @@ paths:
 #[tokio::test]
 async fn api_feature_explorer_contract_for_workspace_repo() {
     let fixture = ApiFixture::new().await;
-    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(|path| path.parent())
-        .expect("workspace root")
-        .to_path_buf();
+    let repo_root = workspace_root();
 
     let response = fixture
         .client
@@ -1815,11 +1823,8 @@ async fn api_feature_explorer_contract_for_workspace_repo() {
 #[tokio::test]
 async fn api_feature_explorer_detail_includes_file_signals_for_workspace_repo() {
     let fixture = ApiFixture::new().await;
-    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(|path| path.parent())
-        .expect("workspace root")
-        .to_path_buf();
+    let repo_root = workspace_root();
+    let _history = FeatureExplorerHistoryFixture::install(&repo_root).await;
 
     let response = fixture
         .client
@@ -1901,11 +1906,7 @@ async fn api_spec_surface_index_falls_back_from_invalid_repo_path_to_workspace_c
 #[tokio::test]
 async fn api_spec_feature_tree_generate_contract() {
     let fixture = ApiFixture::new().await;
-    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(|path| path.parent())
-        .expect("workspace root")
-        .to_path_buf();
+    let repo_root = workspace_root();
 
     let response = fixture
         .client
@@ -1950,11 +1951,7 @@ async fn api_spec_feature_tree_generate_contract() {
 #[tokio::test]
 async fn api_spec_feature_tree_preflight_contract() {
     let fixture = ApiFixture::new().await;
-    let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .and_then(|path| path.parent())
-        .expect("workspace root")
-        .to_path_buf();
+    let repo_root = workspace_root();
 
     let response = fixture
         .client

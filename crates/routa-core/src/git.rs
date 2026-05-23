@@ -2097,7 +2097,7 @@ fn load_blame_chunks(
         }
     }
 
-    chunks.sort_by(|left, right| left.start.cmp(&right.start));
+    chunks.sort_by_key(|chunk| chunk.start);
     cache.insert(cache_key, chunks.clone());
     Ok(chunks)
 }

@@ -15,7 +15,14 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps/desktop/package.json ./apps/desktop/package.json
 COPY packages/office-render/package.json ./packages/office-render/package.json
-RUN npm ci --ignore-scripts --legacy-peer-deps
+COPY scripts/install ./scripts/install
+COPY tools/hook-runtime ./tools/hook-runtime
+COPY patches ./patches
+RUN npm ci --legacy-peer-deps \
+  --fetch-retries=5 \
+  --fetch-retry-mintimeout=20000 \
+  --fetch-retry-maxtimeout=120000 \
+  --fetch-timeout=300000
 
 # ── Stage 2: database schema migrator ────────────────────────────────────
 FROM base AS migrator

@@ -61,9 +61,22 @@ async function findFreePort() {
 }
 
 function finalizeChild(child) {
-  if (!child.killed) {
-    child.kill("SIGTERM");
+  for (const stream of [child.stdin, child.stdout, child.stderr]) {
+    stream?.destroy?.();
+    stream?.unref?.();
   }
+
+  if (!child.killed && child.exitCode === null) {
+    child.kill("SIGTERM");
+    const killTimer = setTimeout(() => {
+      if (child.exitCode === null) {
+        child.kill("SIGKILL");
+      }
+    }, 1_000);
+    killTimer.unref?.();
+  }
+
+  child.unref?.();
 }
 
 function isSkippableFailure(result) {

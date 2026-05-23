@@ -173,7 +173,7 @@ impl EventBus {
 
         // 2. Buffer for agent subscriptions, sorted by priority (descending)
         let mut sorted_subs: Vec<_> = inner.subscriptions.values().cloned().collect();
-        sorted_subs.sort_by(|a, b| b.priority.cmp(&a.priority));
+        sorted_subs.sort_by_key(|sub| std::cmp::Reverse(sub.priority));
 
         let mut one_shot_to_remove: Vec<String> = Vec::new();
 
