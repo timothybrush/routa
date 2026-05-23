@@ -280,6 +280,34 @@ pub async fn list_artifacts(
 }
 
 // ---------------------------------------------------------------------------
+// tasks.getArtifact
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GetArtifactParams {
+    pub artifact_id: String,
+}
+
+#[derive(Debug, Serialize)]
+pub struct GetArtifactResult {
+    pub artifact: Artifact,
+}
+
+pub async fn get_artifact(
+    state: &AppState,
+    params: GetArtifactParams,
+) -> Result<GetArtifactResult, RpcError> {
+    let artifact = state
+        .artifact_store
+        .get(&params.artifact_id)
+        .await?
+        .ok_or_else(|| RpcError::NotFound(format!("Artifact {} not found", params.artifact_id)))?;
+
+    Ok(GetArtifactResult { artifact })
+}
+
+// ---------------------------------------------------------------------------
 // tasks.provideArtifact
 // ---------------------------------------------------------------------------
 

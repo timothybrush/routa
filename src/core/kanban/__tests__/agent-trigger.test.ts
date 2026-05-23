@@ -289,6 +289,8 @@ describe("buildTaskPrompt", () => {
 
     expect(prompt).toContain("## Contract Gates");
     expect(prompt).toContain("Moving this card to Todo requires one valid canonical ```yaml``` story contract");
+    expect(prompt).toContain("call `update_card` with the full corrected description");
+    expect(prompt).toContain("comments, progress notes, and completion summaries do not satisfy this contract gate");
     expect(prompt).toContain("Todo and downstream lanes will not silently repair malformed canonical YAML");
   });
 
@@ -913,6 +915,57 @@ describe("triggerAssignedTaskAgent ACP prompt lifecycle", () => {
       type: AgentEventType.AGENT_COMPLETED,
       agentId: "sess-1",
     }));
+  });
+
+  it("sets the kanban planning MCP profile when the lane needs artifact evidence", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        jsonrpc: "2.0",
+        id: "new",
+        result: { sessionId: "sess-evidence" },
+      }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+    dispatchSessionPromptMock.mockResolvedValue(undefined);
+
+    const task = createTask({
+      id: "task-evidence-profile",
+      title: "Review release evidence",
+      objective: "The next transition requires stored evidence",
+      workspaceId: "default",
+      boardId: "board-evidence",
+      columnId: "review",
+      assignedProvider: "codex",
+      assignedRole: "GATE",
+    });
+
+    await triggerAssignedTaskAgent({
+      origin: "http://127.0.0.1:3000",
+      workspaceId: "default",
+      cwd: "/tmp/project",
+      task,
+      boardColumns: [
+        { id: "review", name: "Review", stage: "review", position: 0 },
+        {
+          id: "done",
+          name: "Done",
+          stage: "done",
+          position: 1,
+          automation: {
+            enabled: true,
+            requiredArtifacts: ["test_results"],
+          },
+        },
+      ],
+    });
+
+    const requestBody = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(requestBody.params).toMatchObject({
+      toolMode: "full",
+      mcpProfile: "kanban-planning",
+    });
   });
 
   it("does not emit AGENT_FAILED when ACP prompt times out waiting for the HTTP response", async () => {

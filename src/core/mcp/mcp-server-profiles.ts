@@ -19,6 +19,9 @@ const KANBAN_PLANNING_TOOL_NAMES = [
   "update_task",
   "update_card",
   "move_card",
+  "provide_artifact",
+  "list_artifacts",
+  "get_artifact",
 ] as const;
 
 const TEAM_COORDINATION_TOOL_NAMES = [

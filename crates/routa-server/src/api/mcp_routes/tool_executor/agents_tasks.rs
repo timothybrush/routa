@@ -351,6 +351,18 @@ pub(super) async fn execute(
             }
             Err(error) => tool_result_error(&error),
         },
+        "get_artifact" => match rpc_tool_result(
+            state,
+            "tasks.getArtifact",
+            serde_json::json!({
+                "artifactId": args.get("artifactId").and_then(|v| v.as_str()).unwrap_or(""),
+            }),
+        )
+        .await
+        {
+            Ok(result) => tool_result_json(&result),
+            Err(error) => tool_result_error(&error),
+        },
         _ => return None,
     };
 

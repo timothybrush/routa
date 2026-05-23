@@ -28,6 +28,9 @@ pub(super) fn tool_allowed_for_profile(name: &str, profile: Option<&str>) -> boo
                 | "update_task"
                 | "update_card"
                 | "move_card"
+                | "provide_artifact"
+                | "list_artifacts"
+                | "get_artifact"
                 | "request_previous_lane_handoff"
                 | "submit_lane_handoff"
         ),
@@ -151,6 +154,13 @@ fn build_tool_list_inner() -> Vec<serde_json::Value> {
                 "type": { "type": "string", "enum": ["screenshot", "test_results", "code_diff", "logs"], "description": "Artifact type filter" }
             },
             "required": ["taskId"]
+        })),
+        tool_def("get_artifact", "Read a single task artifact by ID.", serde_json::json!({
+            "type": "object",
+            "properties": {
+                "artifactId": { "type": "string", "description": "Artifact ID" }
+            },
+            "required": ["artifactId"]
         })),
         // ── Delegation tools ─────────────────────────────────────────────
         tool_def("delegate_task_to_agent", "Delegate a task to a new agent by spawning a real process. Use specialist='CRAFTER' for implementation, specialist='GATE' for verification, specialist='DEVELOPER' for solo plan+implement.", serde_json::json!({
