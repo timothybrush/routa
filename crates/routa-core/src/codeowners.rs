@@ -624,7 +624,7 @@ pub fn detect_codeowners(repo_root: &Path) -> Result<CodeownersResponse, String>
             matched_file_count: count,
         })
         .collect();
-    owner_groups.sort_by(|a, b| b.matched_file_count.cmp(&a.matched_file_count));
+    owner_groups.sort_by_key(|group| std::cmp::Reverse(group.matched_file_count));
 
     let rule_responses: Vec<RuleResponse> = rules
         .iter()
