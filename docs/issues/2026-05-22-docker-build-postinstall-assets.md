@@ -7,10 +7,10 @@ severity: medium
 area: "docker"
 tags: ["docker", "build", "npm", "postinstall"]
 reported_by: "github"
-related_issues: ["https://github.com/phodal/routa/issues/555"]
-github_issue: 555
+related_issues: ["https://github.com/phodal/routa/pull/555", "https://github.com/phodal/routa/pull/578", "https://github.com/phodal/routa/issues/579"]
+github_issue: 579
 github_state: open
-github_url: "https://github.com/phodal/routa/issues/555"
+github_url: "https://github.com/phodal/routa/issues/579"
 ---
 
 # Docker build fails because npm postinstall assets are missing
@@ -53,3 +53,10 @@ Those scripts also need `patches/` and the hook runtime entrypoint when lifecycl
 - `colima nerdctl -- build -t routa-js-build-check .` passed.
 - `docker-compose config` passed.
 - `entrix run --tier fast` passed.
+
+## Release Follow-up
+
+- GitHub issue #579 reports that the latest stable tag `v0.18.1` remains unbuildable even though PR #555 fixed the Docker dependency layer on `main`.
+- PR #578 added `git` and `ca-certificates` to the runtime image before the release, covering the requested runtime git follow-up from #570.
+- `v0.19.0` is the release vehicle for both fixes. The release branch validation includes `npm ci --legacy-peer-deps`, `entrix run --dry-run`, and `entrix run --tier fast`.
+- Local Docker build smoke could not be re-run during the release because this machine does not have the `docker` CLI installed; the prior `colima nerdctl` build result remains the latest local image-build evidence in this tracker.
