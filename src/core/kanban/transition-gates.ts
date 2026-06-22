@@ -1,5 +1,5 @@
 import { VerificationVerdict, type Task } from "../models/task";
-import type { KanbanColumn, KanbanTransitionGateMode } from "../models/kanban";
+import type { KanbanColumn, KanbanColumnAutomation, KanbanTransitionGateMode } from "../models/kanban";
 
 export interface KanbanTransitionGateIssue {
   code: "required_checklist" | "required_human_approval" | "validator_command";
@@ -76,12 +76,20 @@ function isValidatorEvidencePresent(task: Task, command: string): boolean {
     });
 }
 
+function hasTransitionGateRequirements(automation: KanbanColumnAutomation): boolean {
+  return Boolean(
+    (automation.requiredChecklist ?? []).some((item) => item.trim().length > 0)
+    || automation.requiredHumanApproval
+    || automation.validatorCommand?.trim(),
+  );
+}
+
 export function evaluateKanbanTransitionGates(
   task: Task,
   targetColumn: Pick<KanbanColumn, "id" | "name" | "automation"> | undefined,
 ): KanbanTransitionGateResult {
   const automation = targetColumn?.automation;
-  if (!automation?.enabled) {
+  if (!automation || automation.enabled === false) {
     return {
       mode: "blocking",
       passed: true,
@@ -90,6 +98,15 @@ export function evaluateKanbanTransitionGates(
     };
   }
   const mode = automation.gateMode === "warning" ? "warning" : "blocking";
+  if (!hasTransitionGateRequirements(automation)) {
+    return {
+      mode,
+      passed: true,
+      blocking: false,
+      issues: [],
+    };
+  }
+
   const issues: KanbanTransitionGateIssue[] = [];
 
   const requiredChecklist = (automation?.requiredChecklist ?? [])

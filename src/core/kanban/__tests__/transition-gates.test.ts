@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { KanbanColumnAutomation } from "../../models/kanban";
 import { createTask, VerificationVerdict } from "../../models/task";
 import { evaluateKanbanTransitionGates } from "../transition-gates";
 
@@ -54,6 +55,22 @@ describe("evaluateKanbanTransitionGates", () => {
 
     expect(result.passed).toBe(true);
     expect(result.issues).toEqual([]);
+  });
+
+  it("enforces legacy gate config that omits the enabled flag", () => {
+    const result = evaluateKanbanTransitionGates(makeTask(), {
+      id: "release",
+      name: "Release",
+      automation: {
+        requiredHumanApproval: true,
+        gateMode: "warning",
+      } as KanbanColumnAutomation,
+    });
+
+    expect(result.passed).toBe(false);
+    expect(result.mode).toBe("warning");
+    expect(result.blocking).toBe(false);
+    expect(result.issues.map((issue) => issue.code)).toEqual(["required_human_approval"]);
   });
 
   it("does not use unrelated passing text as validator evidence", () => {
