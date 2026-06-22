@@ -56,7 +56,7 @@ describe("runCommand", () => {
 
     await vi.advanceTimersByTimeAsync(50);
 
-    expect(spawnMock).toHaveBeenCalledWith("/bin/bash", ["-lc", "sleep 10 | cat"], expect.objectContaining({
+    expect(spawnMock).toHaveBeenCalledWith("/bin/bash", ["-c", "sleep 10 | cat"], expect.objectContaining({
       detached: true,
     }));
     expect(processKillSpy).toHaveBeenCalledWith(-4321, "SIGTERM");
@@ -68,5 +68,59 @@ describe("runCommand", () => {
 
     expect(result.exitCode).toBe(124);
     expect(result.output).toContain("Command timed out after 50ms");
+  });
+
+  it("drops git local environment variables before running child commands", async () => {
+    const child = createMockChildProcess();
+    spawnMock.mockReturnValue(child);
+    const originalGitDir = process.env.GIT_DIR;
+    const originalGitWorkTree = process.env.GIT_WORK_TREE;
+    const originalGitIndexFile = process.env.GIT_INDEX_FILE;
+
+    try {
+      process.env.GIT_DIR = "/tmp/current/.git";
+      process.env.GIT_WORK_TREE = "/tmp/current";
+      process.env.GIT_INDEX_FILE = "/tmp/current/index";
+
+      const resultPromise = runCommand("git status", {
+        env: {
+          CUSTOM_ENV: "kept",
+          GIT_INDEX_FILE: "/tmp/override-index",
+          NODE_ENV: process.env.NODE_ENV ?? "test",
+        },
+        stream: false,
+      });
+
+      expect(spawnMock).toHaveBeenCalledWith("/bin/bash", ["-c", "git status"], expect.objectContaining({
+        env: expect.objectContaining({
+          CUSTOM_ENV: "kept",
+        }),
+      }));
+      const spawnEnv = spawnMock.mock.calls[0][2].env as NodeJS.ProcessEnv;
+      expect(spawnEnv.GIT_DIR).toBeUndefined();
+      expect(spawnEnv.GIT_WORK_TREE).toBeUndefined();
+      expect(spawnEnv.GIT_INDEX_FILE).toBeUndefined();
+
+      child.emit("close", 0);
+
+      const result = await resultPromise;
+      expect(result.exitCode).toBe(0);
+    } finally {
+      if (originalGitDir === undefined) {
+        delete process.env.GIT_DIR;
+      } else {
+        process.env.GIT_DIR = originalGitDir;
+      }
+      if (originalGitWorkTree === undefined) {
+        delete process.env.GIT_WORK_TREE;
+      } else {
+        process.env.GIT_WORK_TREE = originalGitWorkTree;
+      }
+      if (originalGitIndexFile === undefined) {
+        delete process.env.GIT_INDEX_FILE;
+      } else {
+        process.env.GIT_INDEX_FILE = originalGitIndexFile;
+      }
+    }
   });
 });

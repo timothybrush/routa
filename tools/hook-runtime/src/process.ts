@@ -22,8 +22,34 @@ type RunCommandOptions = {
   timeoutMs?: number;
 };
 
+const GIT_LOCAL_ENV_KEYS = [
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_CONFIG",
+  "GIT_CONFIG_PARAMETERS",
+  "GIT_CONFIG_COUNT",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_DIR",
+  "GIT_WORK_TREE",
+  "GIT_IMPLICIT_WORK_TREE",
+  "GIT_GRAFT_FILE",
+  "GIT_INDEX_FILE",
+  "GIT_NO_REPLACE_OBJECTS",
+  "GIT_REPLACE_REF_BASE",
+  "GIT_PREFIX",
+  "GIT_SHALLOW_FILE",
+  "GIT_COMMON_DIR",
+] as const;
+
 export function tailOutput(output: string, maxChars = 6000): string {
   return output.length <= maxChars ? output : output.slice(-maxChars);
+}
+
+function buildCommandEnv(overrides?: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const env = { ...process.env, ...overrides };
+  for (const key of GIT_LOCAL_ENV_KEYS) {
+    delete env[key];
+  }
+  return env;
 }
 
 export function runCommand(command: string, options: RunCommandOptions = {}): Promise<CommandResult> {
@@ -38,10 +64,11 @@ export function runCommand(command: string, options: RunCommandOptions = {}): Pr
   const finalCommand = process.platform === "win32"
     ? `TEMP=$(printf '%s' "$TEMP" | tr -d '\\r') TMP=$(printf '%s' "$TMP" | tr -d '\\r') ${command}`
     : command;
+  const shellArgs = process.platform === "win32" ? ["-lc", finalCommand] : ["-c", finalCommand];
 
-  const child = spawn(shell, ["-lc", finalCommand], {
+  const child = spawn(shell, shellArgs, {
     cwd: options.cwd ?? process.cwd(),
-    env: { ...process.env, ...options.env },
+    env: buildCommandEnv(options.env),
     detached: process.platform !== "win32",
     stdio: ["inherit", "pipe", "pipe"],
   });
